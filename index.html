@@ -105,7 +105,8 @@
     font-family: var(--font-body);
   }
   .landing {
-    min-height: 100%;
+    min-height: 100vh;
+    background: #FFFFFF;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -121,7 +122,7 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     margin: 0;
-    color: var(--ink);
+    color: #202B22;
   }
   .landing-image {
     width: min(220px, 55vw);
@@ -479,13 +480,53 @@
 
   #shopping-body > .category-header { margin-bottom: 4px; }
   .shopping-group-title {
-    font-family: var(--font-display);
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-family: var(--font-title);
+    font-weight: 400;
+    font-size: 1.3rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     color: var(--cat-color);
     margin: 20px 2px 10px;
   }
   .shopping-group-title:first-of-type { margin-top: 4px; }
+
+  .shopping-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
+  }
+  .shopping-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .shopping-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shopping-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-soft);
+  }
+  .shopping-placeholder svg { width: 24px; height: 24px; }
+  .shopping-qty {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 3px 6px;
+    border-radius: 999px;
+  }
   .btn-back {
     background: none;
     border: 1px solid var(--border);
@@ -720,6 +761,14 @@
       '<ul class="product-list" id="product-list">' + renderRows() + '</ul>';
   }
 
+  function renderShoppingTile(p) {
+    return '' +
+      '<div class="shopping-tile" data-id="' + p.id + '" title="' + esc(p.name) + '">' +
+        (p.photo ? '<img src="' + p.photo + '" alt="' + esc(p.name) + '">' : '<span class="shopping-placeholder">' + CAMERA_SVG + '</span>') +
+        '<span class="shopping-qty">' + p.qty + '</span>' +
+      '</div>';
+  }
+
   function renderShoppingView() {
     var items = STATE.products.filter(function (p) { return statusOf(p) !== 'ok'; });
     var byCat = {};
@@ -732,7 +781,7 @@
       list.sort(function (a, b) { return a.name.localeCompare(b.name, 'it'); });
       groupsHtml += '' +
         '<h3 class="shopping-group-title" style="--cat-color: var(--cat-' + c.id + ')">' + c.label + '</h3>' +
-        '<ul class="product-list">' + list.map(renderProductTile).join('') + '</ul>';
+        '<div class="shopping-grid">' + list.map(renderShoppingTile).join('') + '</div>';
     });
 
     return '' +
