@@ -30,6 +30,7 @@
     --cat-scatolame: #6E7B5E;
     --cat-dolci: #C94F7C;
     --cat-vario: #7D8791;
+    --cat-farmaci: #14919B;
     --cat-pulizia-personale: #7A55A0;
     --cat-pulizia-casa: #2E8878;
     --cat-aperitivi: #B0446F;
@@ -65,6 +66,7 @@
       --cat-scatolame: #A8B896;
       --cat-dolci: #EAA0C0;
       --cat-vario: #B7C0C9;
+      --cat-farmaci: #7FD9E0;
       --cat-pulizia-personale: #C3A6E0;
       --cat-pulizia-casa: #86D6C4;
       --cat-aperitivi: #E397B5;
@@ -96,6 +98,7 @@
     --cat-scatolame: #A8B896;
     --cat-dolci: #EAA0C0;
     --cat-vario: #B7C0C9;
+    --cat-farmaci: #7FD9E0;
     --cat-pulizia-personale: #C3A6E0;
     --cat-pulizia-casa: #86D6C4;
     --cat-aperitivi: #E397B5;
@@ -254,7 +257,7 @@
   }
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
   .field label { font-size: 0.8rem; color: var(--ink-soft); }
-  .field input[type="text"], .field input[type="number"] {
+  .field input[type="text"], .field input[type="number"], .field input[type="date"] {
     border: 1px solid var(--border);
     background: var(--bg);
     border-radius: 8px;
@@ -385,6 +388,38 @@
   .row-status.status-ok { color: var(--ok); }
   .row-status.status-low { color: var(--warn); }
   .row-status.status-out { color: var(--danger); }
+
+  .expiry-row { display: flex; align-items: center; gap: 6px; }
+  .expiry-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 5px 6px;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+  }
+  .expiry-clear {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: var(--ink-soft);
+    border-radius: 6px;
+    display: inline-flex;
+    flex: none;
+  }
+  .expiry-clear:hover { color: var(--danger); background: var(--danger-soft); }
+  .expiry-clear svg { width: 12px; height: 12px; }
+  .expiry-warn {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    align-self: flex-start;
+  }
+  .expiry-warn.expiry-soon { background: var(--warn-soft); color: var(--warn); }
+  .expiry-warn.expiry-expired { background: var(--danger-soft); color: var(--danger); }
 
   .row-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .stepper {
@@ -595,6 +630,7 @@
     { id: 'scatolame', label: 'Scatolame' },
     { id: 'dolci', label: 'Dolci' },
     { id: 'vario', label: 'Vario' },
+    { id: 'farmaci', label: 'Farmaci' },
     { id: 'pulizia-personale', label: 'Pulizia Personale' },
     { id: 'pulizia-casa', label: 'Pulizia Casa' },
     { id: 'aperitivi', label: 'Aperitivi' },
@@ -623,6 +659,24 @@
     if (p.qty <= p.min) return 'low';
     return 'ok';
   }
+
+  var EXPIRY_WARN_DAYS = 10;
+  function daysUntilExpiry(p) {
+    if (!p.expiry) return null;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var exp = new Date(p.expiry + 'T00:00:00');
+    if (isNaN(exp.getTime())) return null;
+    return Math.round((exp - today) / 86400000);
+  }
+  function expiryLabel(p) {
+    var d = daysUntilExpiry(p);
+    if (d === null) return null;
+    if (d < 0) return { text: 'Scaduto', level: 'expired' };
+    if (d === 0) return { text: 'Scade oggi', level: 'expired' };
+    if (d <= EXPIRY_WARN_DAYS) return { text: 'Scade tra ' + d + ' giorni', level: 'soon' };
+    return null;
+  }
   var STATUS_LABEL = { out: 'Esaurito', low: 'Scorta bassa', ok: 'Disponibile' };
   var CAT_LABEL = {};
   CATEGORIES.forEach(function (c) { CAT_LABEL[c.id] = c.label; });
@@ -647,6 +701,7 @@
 
   function renderProductTile(p) {
     var st = statusOf(p);
+    var exp = expiryLabel(p);
     return '' +
       '<li class="product-row" data-id="' + p.id + '">' +
         '<div class="photo-wrap">' +
@@ -666,6 +721,13 @@
             '</span>' +
           '</div>' +
         '</div>' +
+        '<div class="expiry-row">' +
+          '<input type="date" class="expiry-input" data-action="set-expiry" data-id="' + p.id + '" value="' + (p.expiry || '') + '" aria-label="Data di scadenza di ' + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>' +
+          (p.expiry && !readOnly ?
+            '<button type="button" class="expiry-clear" data-action="clear-expiry" data-id="' + p.id + '" aria-label="Rimuovi scadenza di ' + esc(p.name) + '">' + CLOSE_SVG + '</button>'
+            : '') +
+        '</div>' +
+        (exp ? '<span class="expiry-warn expiry-' + exp.level + '">' + exp.text + '</span>' : '') +
         '<div class="row-actions">' +
           '<div class="stepper">' +
             '<button data-action="dec" data-id="' + p.id + '" aria-label="Togli uno da ' + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>–</button>' +
@@ -752,6 +814,10 @@
               '<label for="f-min">Scorta minima (avviso)</label>' +
               '<input type="number" id="f-min" name="min" min="0" step="1" value="2">' +
             '</div>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="f-expiry">Data di scadenza (opzionale)</label>' +
+            '<input type="date" id="f-expiry" name="expiry">' +
           '</div>' +
           '<div class="form-actions">' +
             '<button type="button" class="btn-cancel" data-action="cancel-form">Annulla</button>' +
@@ -1002,7 +1068,8 @@
       category: data.category,
       qty: data.qty,
       min: data.min,
-      photo: data.photo || null
+      photo: data.photo || null,
+      expiry: data.expiry || null
     });
     refreshList();
     scheduleSave();
@@ -1020,6 +1087,22 @@
     var p = STATE.products.find(function (x) { return x.id === id; });
     if (!p) return;
     p.photo = null;
+    refreshList();
+    scheduleSave();
+  }
+  function setExpiry(id, dateStr) {
+    if (readOnly) return;
+    var p = STATE.products.find(function (x) { return x.id === id; });
+    if (!p) return;
+    p.expiry = dateStr || null;
+    refreshList();
+    scheduleSave();
+  }
+  function clearExpiry(id) {
+    if (readOnly) return;
+    var p = STATE.products.find(function (x) { return x.id === id; });
+    if (!p) return;
+    p.expiry = null;
     refreshList();
     scheduleSave();
   }
@@ -1081,6 +1164,7 @@
     document.getElementById('f-name').value = '';
     document.getElementById('f-qty').value = '1';
     document.getElementById('f-min').value = '2';
+    document.getElementById('f-expiry').value = '';
     formPhotoDataUrl = null;
     var preview = document.getElementById('f-photo-preview');
     if (preview) preview.outerHTML = '<span id="f-photo-preview">' + CAMERA_SVG + '</span>';
@@ -1185,6 +1269,7 @@
         else if (action === 'go-home') goHome();
         else if (action === 'save-now') saveNow();
         else if (action === 'copy-shopping-list') copyShoppingList();
+        else if (action === 'clear-expiry') clearExpiry(id);
         else if (action === 'open-shopping-list') openShoppingList();
         else if (action === 'enter-app') { UI.screen = 'app'; fullRender(); }
         return;
@@ -1208,6 +1293,8 @@
     app.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'photo-file-input') {
         handlePhotoFile(e.target.files && e.target.files[0]);
+      } else if (e.target && e.target.classList.contains('expiry-input')) {
+        setExpiry(e.target.getAttribute('data-id'), e.target.value);
       }
     });
 
@@ -1218,7 +1305,8 @@
         if (!name) return;
         var qty = Math.max(0, parseInt(document.getElementById('f-qty').value, 10) || 0);
         var min = Math.max(0, parseInt(document.getElementById('f-min').value, 10) || 0);
-        addProduct({ name: name, category: UI.tab, qty: qty, min: min, photo: formPhotoDataUrl });
+        var expiry = document.getElementById('f-expiry').value || null;
+        addProduct({ name: name, category: UI.tab, qty: qty, min: min, photo: formPhotoDataUrl, expiry: expiry });
         closeForm();
       }
     });
