@@ -376,7 +376,11 @@
   }
   .photo-clear svg { width: 12px; height: 12px; }
 
-  .row-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .row-main .photo-wrap { width: 52px; flex: none; }
+  .row-main .photo-picker svg { width: 18px; height: 18px; }
+  .row-main .photo-clear { width: 16px; height: 16px; top: 2px; right: 2px; }
+  .row-main .photo-clear svg { width: 9px; height: 9px; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .status-dot.status-ok { background: var(--ok); }
   .status-dot.status-low { background: var(--warn); }
@@ -420,6 +424,18 @@
   }
   .expiry-warn.expiry-soon { background: var(--warn-soft); color: var(--warn); }
   .expiry-warn.expiry-expired { background: var(--danger-soft); color: var(--danger); }
+
+  .min-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--ink-soft); }
+  .min-input {
+    width: 48px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 0.72rem;
+    color: var(--ink);
+    text-align: center;
+  }
 
   .row-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .stepper {
@@ -704,19 +720,19 @@
     var exp = expiryLabel(p);
     return '' +
       '<li class="product-row" data-id="' + p.id + '">' +
-        '<div class="photo-wrap">' +
-          '<button type="button" class="photo-picker" data-action="pick-photo" data-id="' + p.id + '" aria-label="' + (p.photo ? 'Cambia foto di ' : 'Aggiungi foto a ') + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>' +
-            (p.photo ? '<img src="' + p.photo + '" alt="">' : CAMERA_SVG) +
-          '</button>' +
-          (p.photo && !readOnly ?
-            '<button type="button" class="photo-clear" data-action="clear-photo" data-id="' + p.id + '" aria-label="Rimuovi foto di ' + esc(p.name) + '">' + CLOSE_SVG + '</button>'
-            : '') +
-        '</div>' +
         '<div class="row-main">' +
-          '<span class="status-dot status-' + st + '" aria-hidden="true"></span>' +
+          '<div class="photo-wrap">' +
+            '<button type="button" class="photo-picker" data-action="pick-photo" data-id="' + p.id + '" aria-label="' + (p.photo ? 'Cambia foto di ' : 'Aggiungi foto a ') + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>' +
+              (p.photo ? '<img src="' + p.photo + '" alt="">' : CAMERA_SVG) +
+            '</button>' +
+            (p.photo && !readOnly ?
+              '<button type="button" class="photo-clear" data-action="clear-photo" data-id="' + p.id + '" aria-label="Rimuovi foto di ' + esc(p.name) + '">' + CLOSE_SVG + '</button>'
+              : '') +
+          '</div>' +
           '<div class="row-text">' +
             '<span class="row-name">' + esc(p.name) + '</span>' +
             '<span class="row-meta">' +
+              '<span class="status-dot status-' + st + '" aria-hidden="true"></span>' +
               '<span class="row-status status-' + st + '">' + STATUS_LABEL[st] + '</span>' +
             '</span>' +
           '</div>' +
@@ -728,6 +744,10 @@
             : '') +
         '</div>' +
         (exp ? '<span class="expiry-warn expiry-' + exp.level + '">' + exp.text + '</span>' : '') +
+        '<div class="min-row">' +
+          '<label for="min-' + p.id + '">Scorta min.</label>' +
+          '<input type="number" id="min-' + p.id + '" class="min-input" min="0" step="1" value="' + p.min + '" data-action="set-min" data-id="' + p.id + '" aria-label="Scorta minima di ' + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>' +
+        '</div>' +
         '<div class="row-actions">' +
           '<div class="stepper">' +
             '<button data-action="dec" data-id="' + p.id + '" aria-label="Togli uno da ' + esc(p.name) + '"' + (readOnly ? ' disabled' : '') + '>–</button>' +
@@ -1098,6 +1118,14 @@
     refreshList();
     scheduleSave();
   }
+  function setMinStock(id, value) {
+    if (readOnly) return;
+    var p = STATE.products.find(function (x) { return x.id === id; });
+    if (!p) return;
+    p.min = Math.max(0, parseInt(value, 10) || 0);
+    refreshList();
+    scheduleSave();
+  }
   function clearExpiry(id) {
     if (readOnly) return;
     var p = STATE.products.find(function (x) { return x.id === id; });
@@ -1295,6 +1323,8 @@
         handlePhotoFile(e.target.files && e.target.files[0]);
       } else if (e.target && e.target.classList.contains('expiry-input')) {
         setExpiry(e.target.getAttribute('data-id'), e.target.value);
+      } else if (e.target && e.target.classList.contains('min-input')) {
+        setMinStock(e.target.getAttribute('data-id'), e.target.value);
       }
     });
 
